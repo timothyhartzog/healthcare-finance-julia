@@ -1,0 +1,19 @@
+name = "HealthcareFinanceDashboard"
+uuid = "7d6b2f1f-c97e-4c2c-a8b8-f0f4f52f2002"
+authors = ["Timothy Hartzog"]
+version = "0.1.0"
+
+[deps]
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Genie = "c43c736e-a2d1-11e8-161f-af95117fbd1e"
+Stipple = "4acbeb90-81a0-11ea-1966-bdaff8155998"
+StippleUI = "b04d3177-5a32-4c4d-98cf-0a5b0d4f6adf"
+
+[compat]
+CSV = "0.10"
+DataFrames = "1"
+Genie = "5"
+Stipple = "0.31"
+StippleUI = "0.24"
+julia = "1.10"
