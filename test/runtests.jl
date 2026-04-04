@@ -1,8 +1,8 @@
-using HealthcareFinance
-using Test
-
-@testset "Basic Financial Tests" begin
-    cf = [100.0, 100.0, 100.0]
-    result = npv(0.05, cf)
-    @test result > 0
-end
+include("financial_engine_tests.jl")
+include("econometrics_engine_tests.jl")
+include("simulation_engine_tests.jl")
+include("value_based_care_engine_tests.jl")
+include("forecasting_models_tests.jl")
+include("accounting_tests.jl")
+include("reimbursement_tests.jl")
+include("forecasting_tests.jl")
