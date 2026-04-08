@@ -10,7 +10,10 @@ using Test
 end
 
 include("financial_engine_tests.jl")
+include("econometrics_engine_tests.jl")
+include("simulation_engine_tests.jl")
+include("value_based_care_engine_tests.jl")
+include("forecasting_models_tests.jl")
+include("accounting_tests.jl")
+include("reimbursement_tests.jl")
 include("forecasting_tests.jl")
-include("econometrics_tests.jl")
-include("simulation_tests.jl")
-include("value_based_care_tests.jl")
