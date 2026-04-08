@@ -1,52 +1,59 @@
+include("../src/reimbursement/reimbursement.jl")
+using .Reimbursement
 using Test
 
-@testset "Reimbursement Engine" begin
-    # DRG payment
-    @test drg_payment(6_000.0, 1.2, 10) ≈ 72_000.0
-    @test drg_payment(6_000.0, 1.2, 10; outlier_threshold=500.0, outlier_rate=0.8) ≈ 72_000.0 + 4_000.0
-    @test_throws ArgumentError drg_payment(0.0, 1.2, 10)
+@testset "Reimbursement" begin
+    @testset "DRG payment" begin
+        base = drg_payment(6000.0, 1.5)
+        @test base ≈ 9000.0
+        with_adj = drg_payment(6000.0, 1.5; dsh_adjustment=0.05, ime_adjustment=0.02)
+        @test with_adj ≈ 9000.0 * 1.07
+        @test_throws ArgumentError drg_payment(0.0, 1.5)
+    end
 
-    # MS-DRG with adjustments
-    p = ms_drg_payment(6_000.0, 1.5, 100, :none; wage_index=1.1, dsh_adjustment=0.02)
-    @test p > 6_000.0 * 1.5 * 100   # DSH boosts payment
-    @test_throws ArgumentError ms_drg_payment(6_000.0, 1.5, 10, :invalid)
+    @testset "DRG outlier payment" begin
+        @test drg_outlier_payment(50000.0, 9000.0, 55000.0) ≈ 0.0
+        pmt = drg_outlier_payment(80000.0, 9000.0, 30000.0; outlier_share=0.80)
+        @test pmt ≈ 0.80 * (80000.0 - 39000.0)
+    end
 
-    # APR-DRG
-    @test apr_drg_payment(6_000.0, 1.0, 1, 100) < apr_drg_payment(6_000.0, 1.0, 4, 100)
-    @test_throws ArgumentError apr_drg_payment(6_000.0, 1.0, 5, 100)
+    @testset "case_mix_index" begin
+        @test case_mix_index([1.0, 2.0, 3.0]) ≈ 2.0
+        @test_throws ArgumentError case_mix_index(Float64[])
+    end
 
-    # OPPS APC
-    @test opps_apc_payment(85.0, 5.0, 100) ≈ 85.0 * 5.0 * 100
+    @testset "APC payment" begin
+        @test apc_payment(100.0, 1.5) ≈ 150.0
+        @test apc_payment(100.0, 1.5; wage_adjustment=1.1) ≈ 165.0
+    end
 
-    # RBRVS RVU
-    pay = rvu_to_payment(2.0, 1.5, 0.1, 36.0)
-    @test pay ≈ (2.0 + 1.5 + 0.1) * 36.0
-    total = rbrvs_payment(2.0, 1.5, 0.1, 36.0, 10)
-    @test total ≈ pay * 10
+    @testset "RVU payment" begin
+        pmt = rvu_payment(1.5, 1.0, 0.1, 34.0)
+        @test pmt ≈ (1.5 + 1.0 + 0.1) * 34.0
+    end
 
-    # Capitation / PMPM
-    @test capitation_pmpm(1_200_000.0, 10_000.0) ≈ 120.0
-    @test pmpm_trend(100.0, 0.04, 12) ≈ 100.0 * (1.04)^12
+    @testset "revenue cycle analytics" begin
+        @test denial_rate(20.0, 200.0) ≈ 0.1
+        @test clean_claim_rate(180.0, 200.0) ≈ 0.9
+        @test Reimbursement.days_in_accounts_receivable(500_000.0, 5_000_000.0; days_in_period=365) ≈ 36.5
+        @test collection_rate(900_000.0, 1_000_000.0) ≈ 0.9
+        @test Reimbursement.net_collection_rate(800.0, 1000.0, 100.0) ≈ 800.0/900.0
+        @test bad_debt_rate(20_000.0, 1_000_000.0) ≈ 0.02
+    end
 
-    # Payer contract net
-    net = payer_contract_net(1_000.0, 0.60, 0.80, 50.0)
-    @test net ≈ 1_000.0 * 0.60 * 0.80 + 50.0
+    @testset "payer mix" begin
+        @test payer_mix_revenue([100.0, 200.0], [0.8, 0.5]) ≈ 180.0
+        @test effective_reimbursement_rate([0.9, 0.6, 0.4], [0.5, 0.3, 0.2]) ≈ 0.71
+    end
 
-    # Revenue cycle KPIs
-    @test days_in_ar(5_000_000.0, 100_000.0) ≈ 50.0
-    @test denial_rate(50, 1000) ≈ 0.05
-    @test clean_claim_rate(970, 1000) ≈ 0.97
-    @test gross_collection_rate(800_000.0, 1_000_000.0) ≈ 0.8
-    @test cash_collection_efficiency(5_100_000.0, 5_000_000.0) ≈ 1.02
-    @test bad_debt_rate(200_000.0, 10_000_000.0) ≈ 0.02
-    @test charity_care_rate(300_000.0, 10_000_000.0) ≈ 0.03
-    @test uncompensated_care_rate(200_000.0, 300_000.0, 10_000_000.0) ≈ 0.05
+    @testset "bundled / episode" begin
+        @test episode_payment_savings(30000.0, 28000.0) ≈ 2000.0
+        @test episode_payment_savings(28000.0, 30000.0) ≈ -2000.0
+    end
 
-    # Scorecard
-    sc = revenue_cycle_scorecard(days_ar=35.0, denial_rt=0.02, clean_claim_rt=0.98,
-                                  cash_efficiency=1.03)
-    @test sc.days_ar == :exceeds
-    @test sc.denial_rate == :exceeds
-    @test sc.clean_claim_rate == :exceeds
-    @test sc.cash_efficiency == :exceeds
+    @testset "cost-to-charge ratio" begin
+        ccr = cost_to_charge_ratio(600_000.0, 1_000_000.0)
+        @test ccr ≈ 0.6
+        @test estimated_cost_from_charges(1_000_000.0, ccr) ≈ 600_000.0
+    end
 end

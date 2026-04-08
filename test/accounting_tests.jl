@@ -1,64 +1,60 @@
+include("../src/accounting/accounting.jl")
+using .Accounting
 using Test
 
-@testset "Accounting Engine" begin
-    # Income statement
-    stmt = income_statement(10_000_000.0, 3_000_000.0, 200_000.0, 300_000.0, 5_500_000.0;
-                             other_income=100_000.0)
-    @test stmt.gross_revenue ≈ 10_000_000.0
-    @test stmt.net_patient_revenue ≈ 6_500_000.0
-    @test stmt.total_operating_revenue ≈ 6_600_000.0
-    @test stmt.operating_income ≈ 1_100_000.0
-    @test stmt.total_margin ≈ 1_100_000.0 / 6_600_000.0  atol=1e-6
+@testset "Accounting" begin
+    @testset "liquidity ratios" begin
+        @test current_ratio(200_000.0, 100_000.0) ≈ 2.0
+        @test quick_ratio(200_000.0, 50_000.0, 100_000.0) ≈ 1.5
+        @test cash_ratio(50_000.0, 100_000.0) ≈ 0.5
+        @test_throws ArgumentError current_ratio(100.0, 0.0)
+    end
 
-    # EBITDA
-    @test ebitda(1_000_000.0, 500_000.0) ≈ 1_500_000.0
-    @test ebitda(1_000_000.0, 500_000.0, 50_000.0) ≈ 1_550_000.0
-    @test ebitda_margin(1_500_000.0, 6_000_000.0) ≈ 0.25
+    @testset "leverage ratios" begin
+        @test debt_to_equity(400_000.0, 600_000.0) ≈ 4/6
+        @test debt_to_assets(400_000.0, 1_000_000.0) ≈ 0.4
+        @test equity_multiplier(1_000_000.0, 600_000.0) ≈ 1_000_000/600_000
+        @test interest_coverage(500_000.0, 50_000.0) ≈ 10.0
+    end
 
-    # Total margin & operating margin
-    @test total_margin(500_000.0, 5_000_000.0) ≈ 0.10
-    @test operating_margin_hfma(500_000.0, 5_000_000.0) ≈ 0.10
-    @test_throws ArgumentError total_margin(100.0, 0.0)
+    @testset "profitability" begin
+        @test gross_profit(1_000_000.0, 600_000.0) ≈ 400_000.0
+        @test gross_profit_margin(1_000_000.0, 600_000.0) ≈ 0.4
+        @test operating_income(1_000_000.0, 800_000.0) ≈ 200_000.0
+        @test net_profit_margin(1_000_000.0, 900_000.0) ≈ 0.1
+        @test return_on_assets(100_000.0, 1_000_000.0) ≈ 0.1
+        @test return_on_equity(100_000.0, 500_000.0) ≈ 0.2
+        ebitda_val = ebitda(200_000.0, 50_000.0, 10_000.0)
+        @test ebitda_val ≈ 260_000.0
+        @test ebitda_margin(260_000.0, 1_000_000.0) ≈ 0.26
+    end
 
-    # Operating leverage
-    @test operating_leverage(2_000_000.0, 1_000_000.0) ≈ 2.0
-    @test_throws ArgumentError operating_leverage(1.0, 0.0)
+    @testset "efficiency ratios" begin
+        @test asset_turnover(1_000_000.0, 500_000.0) ≈ 2.0
+        dar = days_in_accounts_receivable(500_000.0, 5_000_000.0; days_in_period=365)
+        @test dar ≈ 36.5
+        dap = days_in_accounts_payable(100_000.0, 1_000_000.0; days_in_period=365)
+        @test dap ≈ 36.5
+        @test inventory_turnover(600_000.0, 100_000.0) ≈ 6.0
+    end
 
-    # Balance sheet ratios
-    bsr = balance_sheet_ratios(5_000_000.0, 2_000_000.0, 1_000_000.0,
-                                30_000_000.0, 15_000_000.0, 15_000_000.0, 10_000_000.0)
-    @test bsr.current_ratio ≈ 2.5
-    @test bsr.quick_ratio ≈ 0.5
-    @test bsr.debt_to_equity ≈ 1.0
-    @test bsr.equity_multiplier ≈ 2.0
-    @test bsr.long_term_debt_to_capitalization ≈ 10/(10+15)  atol=1e-6
+    @testset "hospital-specific" begin
+        @test occupancy_rate(36500.0, 100; days_in_period=365) ≈ 1.0
+        @test average_length_of_stay(5000.0, 1000.0) ≈ 5.0
+        @test cost_per_discharge(10_000_000.0, 2000.0) ≈ 5000.0
+        @test revenue_per_adjusted_patient_day(3_650_000.0, 36500.0) ≈ 100.0
+    end
 
-    # Days cash on hand
-    @test days_cash_on_hand(100_000_000.0, 500_000.0) ≈ 200.0
+    @testset "cost accounting" begin
+        @test overhead_rate(200_000.0, 10_000.0) ≈ 20.0
+        @test full_absorption_cost(100.0, 50.0, 30.0) ≈ 180.0
+        @test contribution_margin_ratio(1000.0, 600.0) ≈ 0.4
+        rates = [10.0, 5.0]
+        usages = [100.0, 200.0]
+        @test activity_based_cost(rates, usages, 100.0) ≈ 20.0
+    end
 
-    # Cash flow (indirect)
-    cf = cash_flow_indirect(1_000_000.0, 500_000.0, 50_000.0,
-                             200_000.0, 150_000.0, 50_000.0, 2_000_000.0)
-    @test cf.operating ≈ 1_000_000.0 + 500_000.0 + 50_000.0 - 200_000.0 + 150_000.0 - 50_000.0
-    @test cf.investing ≈ -2_000_000.0
-
-    # Straight-line depreciation
-    @test straight_line_depreciation(1_000_000.0, 0.0, 10) ≈ 100_000.0
-    @test_throws ArgumentError straight_line_depreciation(100.0, 200.0, 5)
-
-    # MACRS
-    schedule = macrs_depreciation_schedule(1_000_000.0, 7)
-    @test length(schedule) == 8
-    @test abs(sum(schedule) - 1_000_000.0) < 1.0   # sums to cost
-
-    # Non-profit fund accounting
-    summary = fund_accounting_summary(50_000_000.0, 5_000_000.0, 2_000_000.0)
-    @test summary.total_net_assets ≈ 57_000_000.0
-    @test summary.unrestricted_fraction ≈ 50/57  atol=1e-4
-
-    ending = net_assets_change(100_000_000.0, 2_000_000.0, 500_000.0)
-    @test ending ≈ 102_500_000.0
-
-    # Community benefit rate
-    @test charitable_community_benefit_rate(5_000_000.0, 100_000_000.0) ≈ 0.05
+    @testset "free cash flow" begin
+        @test free_cash_flow(500_000.0, 150_000.0) ≈ 350_000.0
+    end
 end

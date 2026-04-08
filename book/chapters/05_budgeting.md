@@ -1,124 +1,96 @@
-# Chapter 5: Budgeting and Variance Analysis
+# Chapter 5: Budgeting and Forecasting in Healthcare Organizations
 
-## Learning Objectives
-1. Build an operating budget using fixed and variable cost structures
-2. Construct a flexible budget adjusted to actual volume
-3. Decompose total variance into volume, price, efficiency, and mix components
-4. Rank and select capital projects using NPV and strategic scoring
-5. Apply zero-based budgeting to healthcare service lines
+## Learning objectives
 
----
+1. Construct an operating budget for a hospital department or service line.
+2. Apply moving average, exponential smoothing, and Holt-Winters forecasting.
+3. Perform variance analysis comparing actual to budget.
+4. Use flexible budgeting to separate volume effects from efficiency effects.
 
-## 5.1 The Operating Budget
+## 5.1 The budgeting process
 
-Healthcare budgets integrate clinical activity (volume) with financial targets.
+The annual operating budget cycle typically runs 3–4 months before the fiscal year start:
 
-**Basic structure:**
+1. **Strategic direction:** leadership sets volume and financial targets
+2. **Statistical budget:** volume projections (discharges, visits, procedures)
+3. **Revenue budget:** volumes × payer mix × net rates
+4. **Expense budget:** volumes × staffing ratios + fixed overhead
+5. **Capital budget:** equipment, construction, IT projects
+6. **Consolidated review and approval:** board-level sign-off
+
+## 5.2 Forecasting methods
+
+### Moving average
+
+Forecast = mean of the most recent k observations. Simple but does not capture trends.
+
+### Exponential smoothing (SES)
+
 ```
-Revenue = Price × Volume
-Variable Costs = Variable Cost Rate × Volume
-Contribution Margin = Revenue − Variable Costs
-Operating Income = Contribution Margin − Fixed Costs
+S_t = α × y_t + (1 − α) × S_{t-1}
 ```
 
-### Julia Example
+α near 1: heavy weight on recent data (responsive).
+α near 0: slow-moving average (stable, lag-prone).
+
+### Holt's double exponential smoothing (trend)
+
+Adds a trend component:
+```
+L_t = α × y_t + (1 − α)(L_{t-1} + T_{t-1})
+T_t = β(L_t − L_{t-1}) + (1 − β) T_{t-1}
+Forecast(h) = L_t + h × T_t
+```
+
+### Holt-Winters additive (seasonality)
+
+Extends Holt's method with a seasonal component. Required for monthly volumes with seasonal patterns (flu season, elective procedure scheduling).
+
+## 5.3 Variance analysis
+
+Variance = Actual − Budget
+
+Decompose total variance into:
+- **Volume variance:** due to more/fewer cases than budgeted
+- **Rate/price variance:** due to different revenue rates or unit costs
+- **Efficiency variance:** due to staffing productivity differences
+
+A flexible budget adjusts the static budget to actual volume, isolating the efficiency and rate effects.
+
+## 5.4 Julia module: Forecasting
 
 ```julia
-using HealthcareFinance
+include("src/forecasting/forecasting.jl")
+using .Forecasting
 
-# Cardiology clinic: 8,000 visits budgeted at $150/visit
-bud = operating_budget(600_000.0, 45.0, 8_000, 150.0)
-println("Budgeted operating income: \$", bud.operating_income)
-println("Break-even volume: ", break_even_units(600_000.0, 150.0, 45.0), " visits")
+monthly_encounters = [1200, 1150, 1300, 1400, 1350, 1500,
+                      1450, 1600, 1550, 1700, 1650, 1800]
+
+# SES forecast for next 3 months
+res = simple_exponential_smoothing(monthly_encounters, 0.3; horizon=3)
+res.forecast
+
+# Holt-Winters additive (monthly data, season=12)
+hw = holt_winters_additive(Float64.(monthly_encounters), 0.3, 0.1, 0.2, 12; horizon=6)
+hw.forecast
+
+# Budget variance
+budget_variance(1_050_000.0, 1_000_000.0)   # over budget by 50K
+budget_variance_pct(1_050_000.0, 1_000_000.0)  # → 0.05 (5%)
 ```
 
----
+## Key terms
 
-## 5.2 Flexible Budgeting
+- Static budget
+- Flexible budget
+- Volume variance
+- Rate variance
+- Efficiency variance
+- Exponential smoothing
+- Holt-Winters
 
-A *static budget* is prepared at the start of the period. A *flexible budget*
-adjusts the cost and revenue targets to the actual volume, isolating whether
-variance is from volume or other factors.
+## Discussion questions
 
-```julia
-# Actual volume was 8,800 (10% above budget)
-flex = flex_budget(600_000.0, 45.0, 8_800, 150.0)
-
-# Variance analysis
-vol_var   = volume_variance(150.0 - 45.0, 8_800, 8_000)   # CM × ΔVolume
-price_var = price_variance(148.0, 150.0, 8_800)            # actual price was $148
-
-println("Volume variance (F/U): \$", vol_var)
-println("Price variance (F/U):  \$", price_var)
-```
-
----
-
-## 5.3 Four-Variance Decomposition
-
-| Variance | Formula | Meaning |
-|---|---|---|
-| **Volume** | Budgeted CM/unit × (Actual − Budgeted volume) | More/fewer encounters |
-| **Price (Rate)** | (Actual price − Budget price) × Actual volume | Revenue per unit |
-| **Efficiency** | Budgeted cost × (Actual inputs − Standard inputs) | Resource productivity |
-| **Mix** | Shift in composition across service lines or payers | Patient/payer mix effect |
-
-Favorable variances increase operating income; unfavorable reduce it.
-
----
-
-## 5.4 Capital Budgeting
-
-Capital projects in healthcare often require Certificate of Need (CON) approval
-and involve long useful lives (10–30 years for buildings, 5–10 for equipment).
-
-**Decision criteria:**
-1. **NPV > 0**: creates economic value
-2. **IRR > WACC**: returns exceed cost of capital
-3. **DSCR ≥ 1.25**: can service associated debt
-
-```julia
-cfs = [-2_000_000.0, 500_000.0, 600_000.0, 700_000.0, 800_000.0, 600_000.0]
-project_npv = npv(0.07, cfs)
-project_irr = irr(cfs)
-println("NPV:         \$", round(project_npv))
-println("IRR:         ", round(project_irr * 100, digits=2), "%")
-println("PI:          ", profitability_index(project_npv, 2_000_000.0))
-```
-
-### Capital Project Ranking
-
-```julia
-projects = [
-    (name="OR Renovation",    npv=800_000.0,  strategic_score=9.0),
-    (name="MRI Replacement",  npv=600_000.0,  strategic_score=8.0),
-    (name="Parking Structure", npv=200_000.0, strategic_score=4.0),
-    (name="Telehealth Platform", npv=400_000.0, strategic_score=9.5),
-]
-ranked = capital_budget_rank(projects; npv_weight=0.6, strategic_weight=0.4)
-for (i, p) in enumerate(ranked)
-    println("$i. $(p.name): score = $(round(p.composite_score, digits=2))")
-end
-```
-
----
-
-## 5.5 Zero-Based Budgeting in Healthcare
-
-ZBB requires each budget line item to be justified from scratch each period,
-rather than incrementing prior year. Useful for administrative overhead review.
-
-```julia
-# Score a telehealth program for ZBB approval
-score = zero_based_budget_score(9.0, 8.5, 9.0;
-                                  weights=(0.4, 0.3, 0.3))
-println("ZBB score (0–10): ", round(score, digits=2))
-```
-
----
-
-## Key Terms
-- **Contribution margin**: Revenue minus variable costs; the amount available to cover fixed costs and generate profit
-- **Flexible budget**: A budget restated at actual volume to isolate non-volume variances
-- **Capital rationing**: Situation where available capital is insufficient to fund all positive-NPV projects
-- **Zero-based budgeting**: Budget methodology requiring justification of all expenditures from zero
+1. Why is a flexible budget more useful than a static budget for performance evaluation?
+2. How should a hospital CFO set the smoothing parameter α for a volume forecast?
+3. What are the risks of using a purely statistical forecast without qualitative judgment?
