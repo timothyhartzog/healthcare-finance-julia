@@ -1,16 +1,19 @@
-"""
-Compatibility wrapper module for legacy imports.
-
-Prefer `using HealthcareFinance` for the canonical package API.
-"""
 module HealthcareFinanceSystem
 
-include("HealthcareFinance.jl")
-using .HealthcareFinance
+include("financial_engine.jl")
+include("econometrics_engine.jl")
+include("simulation_engine.jl")
+include("value_based_care_engine.jl")
+include("forecasting_models.jl")
 include("accounting/accounting.jl")
 include("reimbursement/reimbursement.jl")
 include("forecasting/forecasting.jl")
 
+using .FinancialEngine
+using .EconometricsEngine
+using .SimulationEngine
+using .ValueBasedCareEngine
+using .ForecastingModels
 using .Accounting
 using .Reimbursement
 using .Forecasting
