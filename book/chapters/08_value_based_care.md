@@ -33,7 +33,7 @@ CMS tracks include:
 using HealthcareFinance
 
 # Set prospective benchmark
-benchmark = acо_benchmark(11_500.0, 0.035, 1.08)
+benchmark = aco_benchmark(11_500.0, 0.035, 1.08)
 println("ACO benchmark PBPY: \$", round(benchmark, digits=0))
 
 # Compute shared savings

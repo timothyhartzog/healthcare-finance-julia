@@ -143,7 +143,7 @@ end
 # ─── Capital Budget Ranking ───────────────────────────────────────────────────
 
 """
-    capital_budget_rank(projects; npv_weights=1.0, strategic_weights=0.0)
+    capital_budget_rank(projects; npv_weight=0.7, strategic_weight=0.3)
 
 Rank capital projects by weighted score.
 

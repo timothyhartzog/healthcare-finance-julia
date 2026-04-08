@@ -64,7 +64,7 @@ export monte_carlo_mean, simulate_growth,
 
 # ValueBasedCareEngine
 export value_score, qalys,
-       mssp_shared_savings, mssp_shared_losses, acо_benchmark,
+       mssp_shared_savings, mssp_shared_losses, aco_benchmark,
        total_cost_of_care, tcoc_pmpm,
        hedis_composite_score, care_gap_closure_roi,
        star_rating_score, readmission_reduction_savings,

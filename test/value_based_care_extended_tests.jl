@@ -2,7 +2,7 @@ using Test
 
 @testset "Value-Based Care Engine — extended" begin
     # ACO benchmark
-    bench = acо_benchmark(12_000.0, 0.03, 1.05)
+    bench = aco_benchmark(12_000.0, 0.03, 1.05)
     @test bench ≈ 12_000.0 * 1.03 * 1.05  atol=1e-6
 
     # MSSP shared savings

@@ -1,7 +1,7 @@
 module ValueBasedCareEngine
 
 export value_score, qalys,
-       mssp_shared_savings, mssp_shared_losses, acо_benchmark,
+       mssp_shared_savings, mssp_shared_losses, aco_benchmark,
        total_cost_of_care, tcoc_pmpm,
        hedis_composite_score, care_gap_closure_roi,
        star_rating_score, readmission_reduction_savings,
@@ -19,7 +19,7 @@ end
 # ─── MSSP / ACO ───────────────────────────────────────────────────────────────
 
 """
-    acо_benchmark(historical_expenditures, trend_rate, risk_adjustment_factor=1.0)
+    aco_benchmark(historical_expenditures, trend_rate, risk_adjustment_factor=1.0)
 
 Set an ACO expenditure benchmark from historical per-capita spending.
 
@@ -29,7 +29,7 @@ Set an ACO expenditure benchmark from historical per-capita spending.
 
 Returns the prospective benchmark PBPY.
 """
-function acо_benchmark(historical_expenditures::Real, trend_rate::Real,
+function aco_benchmark(historical_expenditures::Real, trend_rate::Real,
                         risk_adjustment_factor::Real=1.0)
     historical_expenditures > 0 ||
         throw(ArgumentError("historical_expenditures must be positive"))

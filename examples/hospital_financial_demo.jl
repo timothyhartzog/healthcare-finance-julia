@@ -62,7 +62,7 @@ println("  Medical loss ratio:     $(round(mlr_val*100, digits=1))%")
 
 # ─── 5. ACO / MSSP Performance ────────────────────────────────────────────────
 println("\n[5] ACO SHARED SAVINGS CALCULATION")
-bench     = acо_benchmark(12_200.0, 0.035, 1.06)
+bench     = aco_benchmark(12_200.0, 0.035, 1.06)
 savings   = mssp_shared_savings(bench, 11_400.0, 15_000, 0.50;
                                   minimum_savings_rate=0.02)
 println("  ACO benchmark PBPY:     \$$(round(bench, digits=0))")
